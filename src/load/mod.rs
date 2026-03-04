@@ -11,14 +11,14 @@ use fingerprint::Fingerprint;
 use randomart::generate_randomart;
 
 #[derive(Error, Diagnostic, Debug)]
-pub enum WkdLoadError {
+pub enum KeyLoadError {
     #[error("Failed to parse key")]
     #[diagnostic(code(wkd_fetch))]
     FailedToParseKey(#[from] anyhow::Error),
 }
 
 #[derive(Debug)]
-pub struct WkdKey {
+pub struct Key {
     pub fingerprint: String,
     pub revocation_status: String,
     pub expiry: String,
@@ -42,11 +42,11 @@ fn expires_at(key: &SignedPublicKey) -> Option<chrono::DateTime<chrono::Utc>> {
 }
 
 #[cfg_attr(feature = "tracing", tracing::instrument)]
-pub fn load_key(data: Bytes) -> Result<WkdKey, WkdLoadError> {
+pub fn load_key(data: Bytes) -> Result<Key, KeyLoadError> {
     let pub_key = match SignedPublicKey::from_bytes(std::io::Cursor::new(data)) {
         Ok(key) => key,
         Err(err) => {
-            return Err(WkdLoadError::FailedToParseKey(err.into()));
+            return Err(KeyLoadError::FailedToParseKey(err.into()));
         }
     };
 
@@ -74,7 +74,7 @@ pub fn load_key(data: Bytes) -> Result<WkdKey, WkdLoadError> {
         None => "No expiry date set".to_string(),
     };
 
-    Ok(WkdKey {
+    Ok(Key {
         fingerprint,
         revocation_status,
         expiry,
@@ -85,11 +85,8 @@ pub fn load_key(data: Bytes) -> Result<WkdKey, WkdLoadError> {
 
 #[cfg(test)]
 mod tests {
-    use std::fs;
-
-    use crate::load::WkdLoadError;
-
     use super::*;
+    use std::fs;
 
     #[test]
     fn test_load_key_fail() {
@@ -97,7 +94,7 @@ mod tests {
         let cert = load_key(data);
         assert!(cert.is_err());
         let cert = cert.unwrap_err();
-        assert!(matches!(cert, WkdLoadError::FailedToParseKey(_)));
+        assert!(matches!(cert, KeyLoadError::FailedToParseKey(_)));
     }
 
     #[test]
