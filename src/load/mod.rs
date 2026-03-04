@@ -58,9 +58,23 @@ pub fn load_key(data: Bytes) -> Result<Key, KeyLoadError> {
 
     let fingerprint = fingerprint.to_string();
 
-    let revocation_status = match pub_key.verify() {
-        Err(reason) => format!("Revoked: {}", reason),
-        Ok(_) => "Not as far as we know".to_string(),
+    let revocation_status = {
+        let valid_revocations: Vec<_> = pub_key
+            .details
+            .revocation_signatures
+            .iter()
+            .filter(|sig| sig.verify_key(&pub_key.primary_key).is_ok())
+            .collect();
+
+        if let Some(sig) = valid_revocations.first() {
+            let reason = sig
+                .revocation_reason_code()
+                .map(|code| format!("{code:?}"))
+                .unwrap_or_else(|| "No reason given".to_string());
+            format!("Revoked: {reason}")
+        } else {
+            "Not as far as we know".to_string()
+        }
     };
 
     let expiry = match expires_at(&pub_key) {
