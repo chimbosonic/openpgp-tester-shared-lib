@@ -1044,6 +1044,21 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "c08d65885ee38876c4f86fa503fb49d7b507c2b62552df7c70b2fce627e06381"
 
 [[package]]
+name = "openpgp-tester-lib"
+version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "bytes",
+ "chrono",
+ "hex",
+ "miette",
+ "pgp",
+ "sha2",
+ "thiserror",
+ "tracing",
+]
+
+[[package]]
 name = "p256"
 version = "0.13.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1169,21 +1184,6 @@ dependencies = [
  "twofish",
  "x25519-dalek",
  "zeroize",
-]
-
-[[package]]
-name = "pgp-tester-shared-libs"
-version = "0.1.0"
-dependencies = [
- "anyhow",
- "bytes",
- "chrono",
- "hex",
- "miette",
- "pgp",
- "sha2",
- "thiserror",
- "tracing",
 ]
 
 [[package]]

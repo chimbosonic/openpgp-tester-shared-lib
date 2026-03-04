@@ -1,5 +1,5 @@
 [package]
-name = "pgp-tester-shared-libs"
+name = "openpgp-tester-lib"
 version = "0.1.0"
 edition = "2024"
 
