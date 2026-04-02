@@ -1,8 +1,8 @@
 use bytes::Bytes;
-use chrono::{self};
+use chrono::{self, TimeZone, Utc};
 use miette::Diagnostic;
 use pgp::composed::{Deserializable, SignedPublicKey};
-use pgp::types::{KeyDetails, PublicKeyTrait};
+use pgp::types::KeyDetails;
 use thiserror::Error;
 
 mod fingerprint;
@@ -34,11 +34,11 @@ fn expires_at(key: &SignedPublicKey) -> Option<chrono::DateTime<chrono::Utc>> {
         .users
         .iter()
         .flat_map(|user| &user.signatures)
-        .filter_map(|sig| sig.key_expiration_time())
-        .max()
-        .cloned()?;
+        .filter_map(|sig| sig.key_expiration_time().map(|dur| dur.as_secs()))
+        .max()?;
 
-    Some(*key.primary_key.created_at() + expiration)
+    let expiration = key.primary_key.created_at().as_secs() + expiration;
+    Utc.timestamp_opt(expiration as i64, 0).latest()
 }
 
 #[cfg_attr(feature = "tracing", tracing::instrument)]
