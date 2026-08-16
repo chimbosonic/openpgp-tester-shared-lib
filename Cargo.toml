@@ -10,7 +10,7 @@ hex = "0.4.3"
 miette = "7.6.0"
 thiserror = "2.0.20"
 anyhow = "1.0.104"
-pgp = "0.20.0"
+pgp = {version = "0.20.0", features = ["bzip2", "asm", "large-rsa", "draft-pqc"]}
 chrono = "0.4.45"
 tracing = { version = "0.1.44", optional = true }
 bytes = "1.12.1"
