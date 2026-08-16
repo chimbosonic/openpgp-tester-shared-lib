@@ -8,12 +8,12 @@ edition = "2024"
 sha2 = "0.11.0"
 hex = "0.4.3"
 miette = "7.6.0"
-thiserror = "2.0.18"
-anyhow = "1.0.102"
-pgp = "0.19.0"
-chrono = "0.4.44"
+thiserror = "2.0.20"
+anyhow = "1.0.104"
+pgp = "0.20.0"
+chrono = "0.4.45"
 tracing = { version = "0.1.44", optional = true }
-bytes = "1.11.1"
+bytes = "1.12.1"
 
 [features]
 tracing = ["dep:tracing"]
