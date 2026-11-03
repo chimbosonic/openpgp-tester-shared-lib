@@ -50,7 +50,28 @@ pub fn load_key(data: Bytes) -> Result<Key, KeyLoadError> {
         }
     };
 
-    let fingerprint = Fingerprint::new(&pub_key);
+    Ok(key_from_signed(&pub_key))
+}
+
+#[cfg_attr(feature = "tracing", tracing::instrument)]
+pub fn load_keys(data: Bytes) -> Result<Vec<Key>, KeyLoadError> {
+    let keys = SignedPublicKey::from_bytes_many(std::io::Cursor::new(data))
+        .map_err(|err| KeyLoadError::FailedToParseKey(err.into()))?
+        .map(|pub_key| pub_key.map(|pub_key| key_from_signed(&pub_key)))
+        .collect::<Result<Vec<Key>, _>>()
+        .map_err(|err| KeyLoadError::FailedToParseKey(err.into()))?;
+
+    if keys.is_empty() {
+        return Err(KeyLoadError::FailedToParseKey(anyhow::anyhow!(
+            "No keys found"
+        )));
+    }
+
+    Ok(keys)
+}
+
+fn key_from_signed(pub_key: &SignedPublicKey) -> Key {
+    let fingerprint = Fingerprint::new(pub_key);
 
     let algorithm = format!("{:?}", pub_key.algorithm());
 
@@ -77,7 +98,7 @@ pub fn load_key(data: Bytes) -> Result<Key, KeyLoadError> {
         }
     };
 
-    let expiry = match expires_at(&pub_key) {
+    let expiry = match expires_at(pub_key) {
         Some(date) => {
             if date < chrono::Utc::now() {
                 format!("Expired on {}", date)
@@ -88,13 +109,13 @@ pub fn load_key(data: Bytes) -> Result<Key, KeyLoadError> {
         None => "No expiry date set".to_string(),
     };
 
-    Ok(Key {
+    Key {
         fingerprint,
         revocation_status,
         expiry,
         algorithm,
         randomart,
-    })
+    }
 }
 
 #[cfg(test)]
@@ -125,6 +146,46 @@ mod tests {
         );
         assert_eq!(cert.revocation_status, "Not as far as we know");
         assert_eq!(cert.expiry, "Expired on 2021-08-26 15:38:21 UTC");
+    }
+
+    #[test]
+    fn test_load_keys_multiple() {
+        let key_bytes = fs::read("test_files/test_multiple_keys").unwrap();
+        let keys = load_keys(Bytes::from(key_bytes)).unwrap();
+        assert_eq!(keys.len(), 2);
+        assert_eq!(
+            keys[0].fingerprint,
+            "AC48BC1F029B6188D97E2D807C855DB4466DF0C6"
+        );
+        assert_eq!(keys[0].expiry, "Expires on 2037-11-12 12:15:56 UTC");
+        assert_eq!(
+            keys[1].fingerprint,
+            "A03351F7677A6D0B94F224A636CB3789EAC25E50"
+        );
+        assert_eq!(keys[1].expiry, "Expired on 2021-08-26 15:38:21 UTC");
+    }
+
+    #[test]
+    fn test_load_keys_single() {
+        let key_bytes = fs::read("test_files/test_key").unwrap();
+        let keys = load_keys(Bytes::from(key_bytes)).unwrap();
+        assert_eq!(keys.len(), 1);
+        assert_eq!(
+            keys[0].fingerprint,
+            "AC48BC1F029B6188D97E2D807C855DB4466DF0C6"
+        );
+    }
+
+    #[test]
+    fn test_load_keys_fail() {
+        let keys = load_keys(Bytes::from("Hello, World!"));
+        assert!(matches!(keys, Err(KeyLoadError::FailedToParseKey(_))));
+    }
+
+    #[test]
+    fn test_load_keys_empty() {
+        let keys = load_keys(Bytes::new());
+        assert!(matches!(keys, Err(KeyLoadError::FailedToParseKey(_))));
     }
 
     #[test]
